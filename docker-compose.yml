@@ -1,0 +1,58 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:v2.4"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  mongo:
+    image: mongo
+    container_name: mongo
+    restart: always
+    ports: # TODO delete after testing
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+
+  redis:
+    image: redis
+    container_name: redis
+    ports: # TODO delete after testing
+      - "6379:6379"
+
+  s3:
+    image: minio/minio
+    container_name: s3
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./storage/minio:/data
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+    command: server --address 0.0.0.0:${MINIO_PORT} /data
+
+  whoami:
+    image: "traefik/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      # frontend and backend directives are for v1, v2 uses routers, middlewares, and services
+      # rule: Host(`whoami.localhost`), PathPrefix(`/whoami`)
+      # https://doc.traefik.io/traefik/routing/routers/#rule
+      - "traefik.http.routers.whoami.rule=Path(`/whoami`)"
+      # see entrypoints in traefik config above
+      - "traefik.http.routers.whoami.entrypoints=web"
