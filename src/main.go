@@ -92,10 +92,16 @@ func mongoHandler(w http.ResponseWriter, r *http.Request) {
 
 // Driver docs https://github.com/go-redis/redis
 func redisHandler(w http.ResponseWriter, r *http.Request) {
+	opt, err := redis.ParseURL(os.Getenv("REDIS_DSN"))
+	if err != nil {
+		fmt.Println(opt)
+		http.Error(w, fmt.Sprint(err), 500)
+		return
+	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_DSN"),
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     opt.Addr,
+		Password: opt.Password,
+		DB:       opt.DB,
 	})
 	defer rdb.Close()
 
@@ -103,15 +109,12 @@ func redisHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	urlQuery := r.URL.Query()
-	var err error
 	if urlQuery.Get("key") != "" && urlQuery.Get("value") != "" {
 		err = rdb.Set(ctx, urlQuery.Get("key"), urlQuery.Get("value"), 0).Err()
 
 	} else {
-		val, err := rdb.Get(ctx, "foo").Int64()
-		if err == nil {
-			err = rdb.Set(ctx, "foo", val+1, 0).Err()
-		}
+		val, _ := rdb.Get(ctx, "foo").Int64()
+		err = rdb.Set(ctx, "foo", val+1, 0).Err()
 	}
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), 500)
@@ -200,6 +203,7 @@ func main() {
 	mux.HandleFunc("/hello", helloHandler)
 	loggingMux := NewLogger(mux)
 
+	fmt.Println("HTTP Server Starting...")
 	err := http.ListenAndServe(":8085", loggingMux)
 	if err != nil {
 		fmt.Println(err)

@@ -21,17 +21,13 @@ services:
     image: mongo
     container_name: mongo
     restart: always
-    ports: # TODO delete after testing
-      - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
 
   redis:
     image: redis
     container_name: redis
-    ports: # TODO delete after testing
-      - "6379:6379"
 
   s3:
     image: minio/minio
@@ -41,18 +37,49 @@ services:
     volumes:
       - ./storage/minio:/data
     environment:
-      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
-      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+      - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
+      - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
     command: server --address 0.0.0.0:${MINIO_PORT} /data
 
-  whoami:
-    image: "traefik/whoami"
-    container_name: "simple-service"
-    labels:
+  mongo_api:
+    build: ./src
+    image: go_test_api
+    container_name: mongo_api
+    hostname: mongo_api
+    labels: 
       - "traefik.enable=true"
-      # frontend and backend directives are for v1, v2 uses routers, middlewares, and services
-      # rule: Host(`whoami.localhost`), PathPrefix(`/whoami`)
-      # https://doc.traefik.io/traefik/routing/routers/#rule
-      - "traefik.http.routers.whoami.rule=Path(`/whoami`)"
-      # see entrypoints in traefik config above
-      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.routers.mongo_api.rule=Path(`/mongo`)"
+      - "traefik.http.routers.mongo_api.entrypoints=web"
+    environment: 
+      - MONGO_DSN=mongodb://mongo:27017
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+
+  redis_api:
+    build: ./src
+    image: go_test_api
+    container_name: redis_api
+    hostname: redis_api
+    labels: 
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis_api.rule=Path(`/redis`)"
+      - "traefik.http.routers.redis_api.entrypoints=web"
+    environment: 
+      - REDIS_DSN=redis://redis:6379
+
+  s3_api:
+    build: ./src
+    image: go_test_api
+    container_name: s3_api
+    hostname: s3_api
+    labels: 
+      - "traefik.enable=true"
+      - "traefik.http.routers.s3_api.rule=Path(`/s3`)"
+      - "traefik.http.routers.s3_api.entrypoints=web"
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_KEY}
+      - AWS_REGION=us-west-2
+      - S3_ENDPOINT=http://s3:${MINIO_PORT}
+      - S3_DISABLE_SSL=1
+      - S3_FORCE_PATHSTYLE=1
