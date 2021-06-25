@@ -40,8 +40,8 @@ services:
     command: server --address 0.0.0.0:${MINIO_PORT} /data
 
   mongo_api:
-    build: ./src
-    image: go_test_api
+    build: ./src/mongo_api
+    image: go_test_mongo_api
     container_name: mongo_api
     hostname: mongo_api
     labels: 
@@ -54,8 +54,8 @@ services:
       - MONGO_PASSWORD=${MONGO_PASSWORD}
 
   redis_api:
-    build: ./src
-    image: go_test_api
+    build: ./src/redis_api
+    image: go_test_redis_api
     container_name: redis_api
     hostname: redis_api
     labels: 
@@ -66,8 +66,8 @@ services:
       - REDIS_DSN=redis://redis:6379
 
   s3_api:
-    build: ./src
-    image: go_test_api
+    build: ./src/s3_api
+    image: go_test_s3_api
     container_name: s3_api
     hostname: s3_api
     labels: 
