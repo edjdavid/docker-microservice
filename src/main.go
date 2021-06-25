@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,10 +14,37 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type Config struct {
+	MONGO_USER         string
+	MONGO_PASSWORD     string
+	MONGO_DSN          string
+	REDIS_DSN          string
+	S3_ENDPOINT        string
+	S3_DISABLE_SSL     bool
+	S3_FORCE_PATHSTYLE bool
+}
+
+func LoadConfig(path string) (config Config, err error) {
+	viper.AddConfigPath(path)
+	viper.SetConfigName("app")
+	viper.SetConfigType("env")
+
+	viper.AutomaticEnv()
+
+	err = viper.ReadInConfig()
+	if err != nil {
+		return
+	}
+
+	err = viper.Unmarshal(&config)
+	return
+}
 
 type Logger struct {
 	handler http.Handler
@@ -36,16 +62,16 @@ func NewLogger(handlerToWrap http.Handler) *Logger {
 }
 
 // Driver docs https://github.com/mongodb/mongo-go-driver
-func mongoHandler(w http.ResponseWriter, r *http.Request) {
+func (config *Config) mongoHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	credential := options.Credential{
-		Username: os.Getenv("MONGO_USER"),
-		Password: os.Getenv("MONGO_PASSWORD"),
+		Username: config.MONGO_USER,
+		Password: config.MONGO_PASSWORD,
 	}
 	clientOpts := options.Client().
-		ApplyURI(os.Getenv("MONGO_DSN")).
+		ApplyURI(config.MONGO_DSN).
 		SetAuth(credential)
 	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
@@ -91,8 +117,8 @@ func mongoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Driver docs https://github.com/go-redis/redis
-func redisHandler(w http.ResponseWriter, r *http.Request) {
-	opt, err := redis.ParseURL(os.Getenv("REDIS_DSN"))
+func (config *Config) redisHandler(w http.ResponseWriter, r *http.Request) {
+	opt, err := redis.ParseURL(config.REDIS_DSN)
 	if err != nil {
 		fmt.Println(opt)
 		http.Error(w, fmt.Sprint(err), 500)
@@ -133,13 +159,11 @@ func redisHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Driver docs https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/using-s3-with-go-sdk.html
-func s3Handler(w http.ResponseWriter, r *http.Request) {
-	disableSSL, _ := strconv.ParseBool(os.Getenv("S3_DISABLE_SSL"))
-	s3ForcePathStyle, _ := strconv.ParseBool(os.Getenv("S3_FORCE_PATHSTYLE"))
+func (config *Config) s3Handler(w http.ResponseWriter, r *http.Request) {
 	s3Config := &aws.Config{
-		Endpoint:         aws.String(os.Getenv("S3_ENDPOINT")),
-		DisableSSL:       aws.Bool(disableSSL),
-		S3ForcePathStyle: aws.Bool(s3ForcePathStyle),
+		Endpoint:         aws.String(config.S3_ENDPOINT),
+		DisableSSL:       aws.Bool(config.S3_DISABLE_SSL),
+		S3ForcePathStyle: aws.Bool(config.S3_FORCE_PATHSTYLE),
 	}
 
 	sess := session.New(s3Config)
@@ -195,17 +219,24 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	config, err := LoadConfig(".")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	mux := http.NewServeMux()
 	// none of these handlers are currently restful, GET request will update their respective stores
-	mux.HandleFunc("/mongo", mongoHandler)
-	mux.HandleFunc("/s3", s3Handler)
-	mux.HandleFunc("/redis", redisHandler)
+	mux.HandleFunc("/mongo", config.mongoHandler)
+	mux.HandleFunc("/s3", config.s3Handler)
+	mux.HandleFunc("/redis", config.redisHandler)
 	mux.HandleFunc("/hello", helloHandler)
 	loggingMux := NewLogger(mux)
 
 	fmt.Println("HTTP Server Starting...")
-	err := http.ListenAndServe(":80", loggingMux)
+	err = http.ListenAndServe(":80", loggingMux)
 	if err != nil {
 		fmt.Println(err)
 	}
+
 }
