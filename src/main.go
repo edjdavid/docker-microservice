@@ -204,7 +204,7 @@ func main() {
 	loggingMux := NewLogger(mux)
 
 	fmt.Println("HTTP Server Starting...")
-	err := http.ListenAndServe(":8085", loggingMux)
+	err := http.ListenAndServe(":80", loggingMux)
 	if err != nil {
 		fmt.Println(err)
 	}

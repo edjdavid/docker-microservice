@@ -11,4 +11,4 @@ FROM scratch as bin
 COPY --from=build /out/api /
 
 ENTRYPOINT [ "/api" ]
-EXPOSE 8085
+EXPOSE 80

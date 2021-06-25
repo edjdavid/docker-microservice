@@ -18,7 +18,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
   mongo:
-    image: mongo
+    image: mongo:4.4.6
     container_name: mongo
     restart: always
     environment:
@@ -26,14 +26,12 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
 
   redis:
-    image: redis
+    image: redis:6.2
     container_name: redis
 
   s3:
-    image: minio/minio
+    image: minio/minio:RELEASE.2021-06-17T00-10-46Z
     container_name: s3
-    ports:
-      - "9000:9000"
     volumes:
       - ./storage/minio:/data
     environment:
@@ -77,8 +75,8 @@ services:
       - "traefik.http.routers.s3_api.rule=Path(`/s3`)"
       - "traefik.http.routers.s3_api.entrypoints=web"
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=us-west-2
       - S3_ENDPOINT=http://s3:${MINIO_PORT}
       - S3_DISABLE_SSL=1
