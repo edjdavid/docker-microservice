@@ -4,11 +4,12 @@ WORKDIR /src
 COPY go.* .
 RUN go mod download
 
-COPY . .
+COPY *.go .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/api .
 
 FROM scratch as bin
-COPY --from=build /out/api /src/app.env /
+COPY --from=build /out/api /
+COPY app.env /
 
 ENTRYPOINT [ "/api" ]
 EXPOSE 80
