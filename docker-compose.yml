@@ -4,7 +4,6 @@ services:
 
   traefik:
     image: "traefik:v2.4"
-    container_name: "traefik"
     command:
       #- "--log.level=DEBUG"
       - "--api.insecure=true"
@@ -19,7 +18,6 @@ services:
 
   mongo:
     image: mongo:4.4.6
-    container_name: mongo
     restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
@@ -27,23 +25,16 @@ services:
 
   redis:
     image: redis:6.2
-    container_name: redis
 
   s3:
     image: minio/minio:RELEASE.2021-06-17T00-10-46Z
-    container_name: s3
-    volumes:
-      - ./storage/minio:/data
     environment:
       - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
       - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
     command: server --address 0.0.0.0:${MINIO_PORT} /data
 
   mongo_api:
-    build: ./src/mongo_api
-    image: go_test_mongo_api
-    container_name: mongo_api
-    hostname: mongo_api
+    image: go_test_mongo_api:latest
     labels: 
       - "traefik.enable=true"
       - "traefik.http.routers.mongo_api.rule=Path(`/mongo`)"
@@ -54,10 +45,7 @@ services:
       - MONGO_PASSWORD=${MONGO_PASSWORD}
 
   redis_api:
-    build: ./src/redis_api
-    image: go_test_redis_api
-    container_name: redis_api
-    hostname: redis_api
+    image: go_test_redis_api:latest
     labels: 
       - "traefik.enable=true"
       - "traefik.http.routers.redis_api.rule=Path(`/redis`)"
@@ -66,10 +54,7 @@ services:
       - REDIS_DSN=redis://redis:6379
 
   s3_api:
-    build: ./src/s3_api
-    image: go_test_s3_api
-    container_name: s3_api
-    hostname: s3_api
+    image: go_test_s3_api:latest
     labels: 
       - "traefik.enable=true"
       - "traefik.http.routers.s3_api.rule=Path(`/s3`)"
