@@ -16,16 +16,16 @@ services:
       - ./storage/minio:/data
 
   mongo_api:
-    build: ./src/mongo_api
+    build: ../src/mongo_api
     container_name: mongo_api
     hostname: mongo_api
 
   redis_api:
-    build: ./src/redis_api
+    build: ../src/redis_api
     container_name: redis_api
     hostname: redis_api
 
   s3_api:
-    build: ./src/s3_api
+    build: ../src/s3_api
     container_name: s3_api
     hostname: s3_api

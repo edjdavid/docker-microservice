@@ -40,7 +40,7 @@ services:
       - "traefik.http.routers.mongo_api.rule=Path(`/mongo`)"
       - "traefik.http.routers.mongo_api.entrypoints=web"
     environment: 
-      - MONGO_DSN=mongodb://mongo:27017
+      - MONGO_DSN=${MONGO_DSN}
       - MONGO_USER=${MONGO_USER}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
 
@@ -51,7 +51,7 @@ services:
       - "traefik.http.routers.redis_api.rule=Path(`/redis`)"
       - "traefik.http.routers.redis_api.entrypoints=web"
     environment: 
-      - REDIS_DSN=redis://redis:6379
+      - REDIS_DSN=${REDIS_DSN}
 
   s3_api:
     image: go_test_s3_api:latest
@@ -62,7 +62,7 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=us-west-2
-      - S3_ENDPOINT=http://s3:${MINIO_PORT}
-      - S3_DISABLE_SSL=1
-      - S3_FORCE_PATHSTYLE=1
+      - AWS_REGION=${AWS_REGION}
+      - S3_ENDPOINT=${S3_DSN}
+      - S3_DISABLE_SSL=${S3_DISABLE_SSL}
+      - S3_FORCE_PATHSTYLE=${S3_FORCE_PATHSTYLE}
