@@ -13,8 +13,8 @@ import (
 )
 
 type Config struct {
-	REDIS_DSN string
-	HTTP_PORT int
+	RedisDsn string `mapstructure:"REDIS_DSN"`
+	HttpPort int    `mapstructure:"HTTP_PORT"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
@@ -50,7 +50,7 @@ func NewLogger(handlerToWrap http.Handler) *Logger {
 
 // Driver docs https://github.com/go-redis/redis
 func (config *Config) redisHandler(w http.ResponseWriter, r *http.Request) {
-	opt, err := redis.ParseURL(config.REDIS_DSN)
+	opt, err := redis.ParseURL(config.RedisDsn)
 	if err != nil {
 		fmt.Println(opt)
 		http.Error(w, fmt.Sprint(err), 500)
@@ -103,7 +103,7 @@ func main() {
 	loggingMux := NewLogger(mux)
 
 	fmt.Println("HTTP Server Starting...")
-	err = http.ListenAndServe(fmt.Sprintf(":%v", config.HTTP_PORT), loggingMux)
+	err = http.ListenAndServe(fmt.Sprintf(":%v", config.HttpPort), loggingMux)
 	if err != nil {
 		fmt.Println(err)
 	}

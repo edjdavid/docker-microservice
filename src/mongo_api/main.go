@@ -15,10 +15,12 @@ import (
 )
 
 type Config struct {
-	MONGO_USER     string
-	MONGO_PASSWORD string
-	MONGO_DSN      string
-	HTTP_PORT      int
+	MongoUser       string `mapstructure:"MONGO_USER"`
+	MongoPwd        string `mapstructure:"MONGO_PASSWORD"`
+	MongoDsn        string `mapstructure:"MONGO_DSN"`
+	MongoDb         string `mapstructure:"MONGO_DB"`
+	MongoCollection string `mapstructure:"MONGO_COLLECTION"`
+	HttpPort        int    `mapstructure:"HTTP_PORT"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
@@ -58,11 +60,11 @@ func (config *Config) mongoHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	credential := options.Credential{
-		Username: config.MONGO_USER,
-		Password: config.MONGO_PASSWORD,
+		Username: config.MongoUser,
+		Password: config.MongoPwd,
 	}
 	clientOpts := options.Client().
-		ApplyURI(config.MONGO_DSN).
+		ApplyURI(config.MongoDsn).
 		SetAuth(credential)
 	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
@@ -77,7 +79,7 @@ func (config *Config) mongoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	collection := client.Database("local").Collection("demo")
+	collection := client.Database(config.MongoDb).Collection(config.MongoCollection)
 
 	collection.InsertOne(ctx, bson.M{
 		"host": r.Host,
@@ -120,7 +122,7 @@ func main() {
 	loggingMux := NewLogger(mux)
 
 	fmt.Println("HTTP Server Starting...")
-	err = http.ListenAndServe(fmt.Sprintf(":%v", config.HTTP_PORT), loggingMux)
+	err = http.ListenAndServe(fmt.Sprintf(":%v", config.HttpPort), loggingMux)
 	if err != nil {
 		fmt.Println(err)
 	}

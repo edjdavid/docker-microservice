@@ -16,10 +16,11 @@ import (
 )
 
 type Config struct {
-	S3_ENDPOINT        string
-	S3_DISABLE_SSL     bool
-	S3_FORCE_PATHSTYLE bool
-	HTTP_PORT          int
+	S3Bucket         string `mapstructure:"S3_BUCKET"`
+	S3Endpoint       string `mapstructure:"S3_ENDPOINT"`
+	S3DisableSsl     bool   `mapstructure:"S3_DISABLE_SSL"`
+	S3ForcePathstyle bool   `mapstructure:"S3_FORCE_PATHSTYLE"`
+	HttpPort         int    `mapstructure:"HTTP_PORT"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
@@ -56,15 +57,15 @@ func NewLogger(handlerToWrap http.Handler) *Logger {
 // Driver docs https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/using-s3-with-go-sdk.html
 func (config *Config) s3Handler(w http.ResponseWriter, r *http.Request) {
 	s3Config := &aws.Config{
-		Endpoint:         aws.String(config.S3_ENDPOINT),
-		DisableSSL:       aws.Bool(config.S3_DISABLE_SSL),
-		S3ForcePathStyle: aws.Bool(config.S3_FORCE_PATHSTYLE),
+		Endpoint:         aws.String(config.S3Endpoint),
+		DisableSSL:       aws.Bool(config.S3DisableSsl),
+		S3ForcePathStyle: aws.Bool(config.S3ForcePathstyle),
 	}
 
 	sess := session.New(s3Config)
 	s3Client := s3.New(sess)
 
-	bucket := aws.String("demo-bucket")
+	bucket := aws.String(config.S3Bucket)
 	// FIXME this shouldn't be in prod, can assume that buckets are already created
 	_, err := s3Client.CreateBucket(&s3.CreateBucketInput{
 		Bucket: bucket,
@@ -121,7 +122,7 @@ func main() {
 	loggingMux := NewLogger(mux)
 
 	fmt.Println("HTTP Server Starting...")
-	err = http.ListenAndServe(fmt.Sprintf(":%v", config.HTTP_PORT), loggingMux)
+	err = http.ListenAndServe(fmt.Sprintf(":%v", config.HttpPort), loggingMux)
 	if err != nil {
 		fmt.Println(err)
 	}
